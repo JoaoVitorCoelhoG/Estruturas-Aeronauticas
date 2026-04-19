@@ -1,0 +1,59 @@
+Caros alunos, esse arquivo é apenas uma instrução com a definição das variáveis que devem ser
+colocada em cada uma das seções abaixos.
+
+*POINTS (id,x_point,y_point)
+
+id = número do ponto (1,2,3,4,5,...)
+x_point = posição x global do ponto
+y_point = posição y global do ponto
+
+*CURVES (id,point_ini,point_fim)
+
+id = número da curva (1,2,3,4,5,...)
+point_ini = número do ponto inicial com base nos valores adotados na seção *POINTS
+point_fim = número do ponto final com base nos valores adotados na seção *POINTS
+
+*MATERIALS (id,E,nu)
+
+id = número do material (1,2,3,4,5,...)
+E = módulo de elasticidade do material
+nu = coeficiente de Poisson do material
+
+*PROPERTIES (id,material_id,A)
+
+id = número da propriedade (1,2,3,4,5,...)
+material_id = número do material com base nos valores adotados na seção *MATERIALS
+A = Área da seção transversal da viga
+
+*MESH (curve_id,property_id,num_elem)
+
+curve_id = número da curva com base nos valores adotados na seção *CURVES
+property_id = número da propriedade com base nos valores adotados na seção *PROPERTIES
+num_elem = número de elementos
+
+*POINT_LOADS (id,point_id,related_gdl,value)
+
+id = número do carregamento pontual (1,2,3,4,5,...)
+point_id = número do ponto com base nos valores adotados na seção *POINTS no qual o carregamento é aplicado
+related_gdl = 1 (força atuando na direção x GLOBAL); 2 (força atuando na direção y GLOBAL);
+value = valor do carregamento
+
+*DIST_LOADS (id,curve_id,value_ini,value_fim,direction:(x,y,l,t))
+
+id = número do carregamento distribuído (1,2,3,4,5,...)
+curve_id = número da curva com base nos valores adotados na seção *CURVES na qual o carregamento é aplicado
+value_ini = valor do carregamento no ponto inicial da curva
+value_fim = valor do carregamento no ponto final da curva
+direction:(x,y,l,t) = direção de aplicação:
+                      x (carregamento distribuído atuando na direção x GLOBAL);
+                      y (carregamento distribuído atuando na direção y GLOBAL);
+                      l (carregamento distribuído atuando na direção x LOCAL);
+                      t (carregamento distribuído atuando na direção y LOCAL);
+
+*BC (point_id,related_gdl,value)
+
+point_id = número do ponto com base nos valores adotados na seção *POINTS no qual a condição de contorno é aplicada
+related_gdl = 1 (bc aplicada na direção x GLOBAL); 2 (bc aplicada na direção y GLOBAL)
+value = valor da condição de contorno aplicada
+
+
