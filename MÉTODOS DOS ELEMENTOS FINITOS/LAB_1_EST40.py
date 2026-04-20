@@ -239,7 +239,7 @@ for force_id in range(0,int(len(Entrada["POINT_LOADS"]))):
     curve = 0
     while Entrada["POINT_LOADS"][force_id][1] != Entrada["CURVES"][curve][1]:
         curve+=1
-    F[curve] = Entrada["POINT_LOADS"][force_id][3]
+    F[curve] += Entrada["POINT_LOADS"][force_id][3]
 
 #print(F)
 
@@ -262,9 +262,9 @@ for restriction_point in range(0,int(len(Entrada["BC"]))):
             curve+=1
             break
         curve+=1
-    K, Forca_final = restricao(K,curve, Forca_final)
+    Kcc, Forca_final = restricao(K,curve, Forca_final)
 
-u = np.linalg.solve(K, Forca_final)
+u = np.linalg.solve(Kcc, Forca_final)
 #print(u)
 print(u[::int(Entrada["MESH"][0][2])])
 

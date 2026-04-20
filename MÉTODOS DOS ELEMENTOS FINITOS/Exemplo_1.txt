@@ -1,7 +1,7 @@
 *POINTS (id,x_point,y_point)
 1,0.000,0.
 2,0.200,0.
-3,0.350,0.
+3,0.550,0.
 
 *CURVES (id,point_ini,point_fim)
 1,1,2
@@ -13,15 +13,15 @@
 
 *PROPERTIES (id,material_id,A)
 1,1,0.0010
-2,1,0.0022
+2,2,0.0022
 
 *MESH (curve_id,property_id,num_elem)
-1,2,1
+1,1,1
 2,2,1
 
 *POINT_LOADS (id,point_id,related_gdl,value)
-1,2,1,25000
-2,2,1,25000
+1,2,1,-25000
+2,2,1,-25000
 
 *DIST_LOADS (id,curve_id,value_ini,value_fim,direction:(x,y,l,t))
 1,1,-20000,-20000,x
