@@ -21,7 +21,7 @@ def defactor(linha: str, f):
 
 Entrada = {}
 
-with open("entrada_Ex_Barra.txt", "r", encoding="utf-8") as f:
+with open("Exemplo_1.txt", "r", encoding="utf-8") as f:
 
     for linha in f:
 
@@ -117,7 +117,7 @@ def phi_integral(curve_id:int, Entrada:list)->float: # Tá linear ainda
     while curve_id != int(Entrada["MESH"][mesh-1][0]):
         mesh+=1
 
-    nodes_in_mesh = int(Entrada["MESH"][mesh-1][2])
+    nodes_in_mesh = int(Entrada["MESH"][mesh-1][2]) #Não é bem nó é elemento
     cte = (tamanho_mesh(mesh,Entrada))/nodes_in_mesh
 
     tamanho_matriz =0
@@ -172,7 +172,7 @@ def phi_derivate(n_mesh:int,node:int,Entrada:list) -> list:
     tamanho_matriz = int(tamanho_matriz) + 1
     K = np.zeros((tamanho_matriz,tamanho_matriz))
     for i in range(tamanho_matriz):
-        for j in range(tamanho_matriz):
+        for j in range(tamanho_matriz): # Dá para colocar condição de para de acordo com o número de meshs
             if((i==node-1 and j == node-1) or (i==node and j == node)):
                 K[i][j] = cte
             if((i==node and j == node-1) or (i==node-1 and j == node)):
@@ -220,7 +220,7 @@ for curve in range(1,int(len(Entrada["MESH"]))+1):
         count +=1
         K += phi_derivate(mesh,node,Entrada) 
         
-print(K)
+#print(K)
 
 #Cargas Distribuídas
 
@@ -258,9 +258,14 @@ def restricao(K,ponto:int,Forca_Final):
 for restriction_point in range(0,int(len(Entrada["BC"]))):
     curve = 0
     while Entrada["BC"][restriction_point][0] != Entrada["CURVES"][curve][1]:
+        if curve + 1 >= len(Entrada["CURVES"]) and Entrada["BC"][restriction_point][0] == Entrada["CURVES"][curve][2]:
+            curve+=1
+            break
         curve+=1
     K, Forca_final = restricao(K,curve, Forca_final)
 
 u = np.linalg.solve(K, Forca_final)
-print(u)
+#print(u)
+print(u[::int(Entrada["MESH"][0][2])])
+
         
