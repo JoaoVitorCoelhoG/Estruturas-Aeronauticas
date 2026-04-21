@@ -21,7 +21,7 @@ def defactor(linha: str, f):
 
 Entrada = {}
 
-with open("Exemplo_1.txt", "r", encoding="utf-8") as f:
+with open("entrada_Ex_Barra.txt", "r", encoding="utf-8") as f:
 
     for linha in f:
 
@@ -48,6 +48,15 @@ with open("Exemplo_1.txt", "r", encoding="utf-8") as f:
 
         if linha == "*BC (point_id,related_gdl,value)\n":
             Entrada["BC"] = defactor(linha,f)
+
+tamanho_matriz =0
+for i in range(len((Entrada["MESH"]))): 
+    tamanho_matriz += Entrada["MESH"][i][2]
+
+tamanho_matriz = int(tamanho_matriz) + 1
+
+Entrada["TAMANHO_MATRIZ"] = tamanho_matriz
+
 
 def tamanho_mesh(n_mesh:int,Entrada:list)->float:
     """
@@ -113,18 +122,15 @@ def phi_integral(curve_id:int, Entrada:list)->float: # Tá linear ainda
     return:: float
     return: Vetor de força distribuída do n_mesh-esimo elemento.
     """
+
     mesh = 0
     while curve_id != int(Entrada["MESH"][mesh-1][0]):
         mesh+=1
 
-    nodes_in_mesh = int(Entrada["MESH"][mesh-1][2]) #Não é bem nó é elemento
-    cte = (tamanho_mesh(mesh,Entrada))/nodes_in_mesh
+    element_in_mesh = int(Entrada["MESH"][mesh-1][2]) 
+    cte = (tamanho_mesh(mesh,Entrada))/element_in_mesh
 
-    tamanho_matriz =0
-    for i in range(len((Entrada["MESH"]))): #Vou dá um jeito de sumir com isso
-        tamanho_matriz += Entrada["MESH"][i][2]
-
-    tamanho_matriz = int(tamanho_matriz) + 1
+    tamanho_matriz = Entrada["TAMANHO_MATRIZ"] 
     b = np.zeros(tamanho_matriz) # Inicializando 
      
     point_force = 0
@@ -134,8 +140,8 @@ def phi_integral(curve_id:int, Entrada:list)->float: # Tá linear ainda
     q_initial = Entrada["DIST_LOADS"][point_force-1][2] #Dá para remover
     q_final = Entrada["DIST_LOADS"][point_force-1][3]
 
-    #vetor = np.linspace(curve_init[1], curve_end[1], nodes_in_mesh)
-    q = np.linspace(q_initial, q_final, nodes_in_mesh+1)
+    #vetor = np.linspace(curve_init[1], curve_end[1], element_in_mesh)
+    q = np.linspace(q_initial, q_final, element_in_mesh+1)
     
 
     mesh = 1
@@ -146,7 +152,7 @@ def phi_integral(curve_id:int, Entrada:list)->float: # Tá linear ainda
         while a < int(Entrada["MESH"][mesh-1][2]):
             a +=1
         count+=a
-    for k in range(nodes_in_mesh):
+    for k in range(element_in_mesh):
         q_initial = q[k]
         q_final = q[k+1]
         b[count] += (2*q_initial + q_final)/6*cte
@@ -164,12 +170,9 @@ def phi_derivate(n_mesh:int,node:int,Entrada:list) -> list:
     """
     
     cte = property_area(n_mesh,Entrada)*property_elasticity(n_mesh,Entrada)*Entrada["MESH"][n_mesh-1][2]/(tamanho_mesh(n_mesh,Entrada))
-    tamanho_matriz =0
-    
-    for i in range(len((Entrada["MESH"]))):
-        tamanho_matriz += Entrada["MESH"][i][2]
 
-    tamanho_matriz = int(tamanho_matriz) + 1
+    tamanho_matriz = Entrada["TAMANHO_MATRIZ"] 
+
     K = np.zeros((tamanho_matriz,tamanho_matriz))
     for i in range(tamanho_matriz):
         for j in range(tamanho_matriz): # Dá para colocar condição de para de acordo com o número de meshs
@@ -191,7 +194,7 @@ def property_area(n_mesh: int, Entrada: list) ->float:
 
 def property_elasticity(i: int, Entrada:list) -> float:
     """
-    n_mesh: É o número do mesh definido pela ordem de meshs da entrada, começa do 0
+    n_mesh: É o número do mesh definido pela ordem de meshs da entrada
     Entrada: É o Dicionário de todos os dados da entrada
     return:: float
     return: E o módulo de elasticidade do n_mesh-esimo elemento.
@@ -200,12 +203,8 @@ def property_elasticity(i: int, Entrada:list) -> float:
     return E
 
 ## CÁLCULO DA MATRIZ DE RIGIDEZ
-tamanho_matriz =0
 
-for i in range(len((Entrada["MESH"]))):
-    tamanho_matriz += Entrada["MESH"][i][2]
-
-tamanho_matriz = int(tamanho_matriz) + 1
+tamanho_matriz = Entrada["TAMANHO_MATRIZ"] 
     
 K = np.zeros((tamanho_matriz,tamanho_matriz))
 
@@ -246,13 +245,15 @@ for force_id in range(0,int(len(Entrada["POINT_LOADS"]))):
 Forca_final = F+b
 
 def restricao(K,ponto:int,Forca_Final):
+    A = K.copy()
     for i in range(len(K)):
         for j in range(len(K)):
             if i == ponto or j == ponto:
-                K[i,j] = 0
-    K[ponto][ponto] = 1
-    Forca_Final[ponto] = 0
-    return K, Forca_Final
+                A[i,j] = 0
+    A[ponto][ponto] = 1
+    b = Forca_Final.copy()
+    b[ponto] = 0
+    return A, b
 
     
 for restriction_point in range(0,int(len(Entrada["BC"]))):
@@ -262,10 +263,56 @@ for restriction_point in range(0,int(len(Entrada["BC"]))):
             curve+=1
             break
         curve+=1
-    Kcc, Forca_final = restricao(K,curve, Forca_final)
+    Kcc, Fcc = restricao(K,curve, Forca_final)
 
-u = np.linalg.solve(Kcc, Forca_final)
+u = np.linalg.solve(Kcc, Fcc)
 #print(u)
-print(u[::int(Entrada["MESH"][0][2])])
 
-        
+f_cc = Kcc@u
+reactions_force = K@u - Forca_final
+d = u[::int(Entrada["MESH"][0][2])]
+#print(u[::int(Entrada["MESH"][0][2])])
+
+#Falta só calcular as forças normais
+
+N = np.zeros(tamanho_matriz - 1)
+
+#Fazer generalizações para quando tiver muitas meshs
+N = np.ones(tamanho_matriz - 1)
+for curve in range(len(Entrada["CURVES"])):
+    mesh = 0
+    while curve + 1 != Entrada["MESH"][mesh][0]:
+        mesh +=1
+    N[curve] = property_elasticity(mesh+1,Entrada)*property_area(mesh+1,Entrada)/tamanho_mesh(mesh,Entrada)*(d[curve+1] - d[curve])
+
+# Forma recomendada (fecha automaticamente)
+with open("saida_barra.txt", "w") as arquivo:
+    arquivo.write("Resultado da Simulação\n\n")
+    
+    arquivo.write("Arquivo de Entrada: entrada_Ex_Trelica.txt\n\n\n")
+    
+    
+    arquivo.write("---------- Resultados Nodais ----------\n")
+    arquivo.write("|   Nó|              u|              v|\n")
+    arquivo.write("---------------------------------------\n")
+
+    for no in range(tamanho_matriz):
+        arquivo.write("|%5d|%15.4f|%15s|\n" % (no+1, u[no], "0.0"))
+
+    arquivo.write("---------------------------------------\n\n\n")
+
+
+    arquivo.write("---- Resultados por Elemento ----\n")
+    arquivo.write("|     Elemento|          Força x|\n")
+    arquivo.write("---------------------------------\n")
+
+    for no in range(tamanho_matriz-1):
+        arquivo.write("|%13d|%17.1f|\n" % (no+1, N[no]))
+    arquivo.write("---------------------------------\n\n\n")
+
+    arquivo.write("------ Forças de Reação -----\n")
+    arquivo.write("|   Nó|   GDL|          Value|\n")
+    arquivo.write("-----------------------------\n")
+
+    for no in range(len(Entrada["BC"])):
+        arquivo.write("|%13d|%14.1f|\n" % (Entrada["BC"][no][0], reactions_force[no]))
