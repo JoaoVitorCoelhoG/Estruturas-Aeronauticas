@@ -174,12 +174,16 @@ def phi_derivate(n_mesh:int,node:int,Entrada:list) -> list:
     tamanho_matriz = Entrada["TAMANHO_MATRIZ"] 
 
     K = np.zeros((tamanho_matriz,tamanho_matriz))
-    for i in range(tamanho_matriz):
-        for j in range(tamanho_matriz): # Dá para colocar condição de para de acordo com o número de meshs
-            if((i==node-1 and j == node-1) or (i==node and j == node)):
-                K[i][j] = cte
-            if((i==node and j == node-1) or (i==node-1 and j == node)):
-                K[i][j] = -cte
+    K[node-1][node-1]=cte
+    K[node][node]=cte
+    K[node-1][node]=-cte
+    K[node][node-1]=-cte
+    # for i in range(tamanho_matriz):
+    #     for j in range(tamanho_matriz): # Dá para colocar condição de para de acordo com o número de meshs
+    #         if((i==node-1 and j == node-1) or (i==node and j == node)):
+    #             K[i][j] = cte
+    #         if((i==node and j == node-1) or (i==node-1 and j == node)):
+    #             K[i][j] = -cte #COLOCAR ISSO EM UMA ENTRADA SÓ
     return K
             
 def property_area(n_mesh: int, Entrada: list) ->float:
