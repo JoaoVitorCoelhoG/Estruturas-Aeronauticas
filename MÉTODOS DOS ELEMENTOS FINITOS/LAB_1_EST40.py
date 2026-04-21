@@ -288,17 +288,18 @@ d = u[::int(Entrada["MESH"][0][2])] #Isso não está correto, só funciona para 
 N = np.zeros(tamanho_matriz - 1)
 
 #Fazer generalizações para quando tiver muitas meshs
-N = np.ones(tamanho_matriz - 1)
+N = np.ones(tamanho_matriz-1)
 a =0 
 for curve in range(len(Entrada["CURVES"])):
     mesh = 0
     while curve + 1 != Entrada["MESH"][mesh][0]:
         mesh +=1
-    for i in range(int(Entrada["MESH"][mesh][2]) -1):
+    for i in range(int(Entrada["MESH"][mesh][2])):
         a+=1
-        N[a] = property_elasticity(mesh+1,Entrada)*property_area(mesh+1,Entrada)/tamanho_mesh(mesh,Entrada)*(u[a+1] - u[a])#problema nas meshs também
+        N[a-1] = property_elasticity(mesh+1,Entrada)*property_area(mesh+1,Entrada)/tamanho_mesh(mesh,Entrada)*(u[a] - u[a-1])#problema nas meshs também
+    
 
-# Forma recomendada (fecha automaticamente)
+
 with open("saida_barra.txt", "w") as arquivo:
     arquivo.write("Resultado da Simulação\n\n")
     
@@ -319,8 +320,8 @@ with open("saida_barra.txt", "w") as arquivo:
     arquivo.write("|     Elemento|          Força x|\n")
     arquivo.write("---------------------------------\n")
 
-    for no in range(tamanho_matriz-1):
-        arquivo.write("|%13d|%17.1f|\n" % (no+1, N[no]))
+    for no in range(1,tamanho_matriz):
+        arquivo.write("|%13d|%17.1f|\n" % (no, N[no-1]))
     arquivo.write("---------------------------------\n\n\n")
 
     arquivo.write("------ Forças de Reação -----\n")
