@@ -240,9 +240,15 @@ F = np.zeros(tamanho_matriz)
 
 for force_id in range(0,int(len(Entrada["POINT_LOADS"]))):
     curve = 0
+    a=0
     while Entrada["POINT_LOADS"][force_id][1] != Entrada["CURVES"][curve][1]:
         curve+=1
-    F[curve] += Entrada["POINT_LOADS"][force_id][3]
+    
+    mesh = 0
+    while curve+1 != Entrada["MESH"][mesh][0]:
+        mesh+=1        
+        a += int(Entrada["MESH"][mesh][2])
+    F[a] += Entrada["POINT_LOADS"][force_id][3]
 
 #print(F)
 
@@ -274,7 +280,7 @@ u = np.linalg.solve(Kcc, Fcc)
 
 f_cc = Kcc@u
 reactions_force = K@u - Forca_final
-d = u[::int(Entrada["MESH"][0][2])]
+d = u[::int(Entrada["MESH"][0][2])] #Isso não está correto, só funciona para quando o número de meshs é igual
 #print(u[::int(Entrada["MESH"][0][2])])
 
 #Falta só calcular as forças normais
@@ -283,11 +289,14 @@ N = np.zeros(tamanho_matriz - 1)
 
 #Fazer generalizações para quando tiver muitas meshs
 N = np.ones(tamanho_matriz - 1)
+a =0 
 for curve in range(len(Entrada["CURVES"])):
     mesh = 0
     while curve + 1 != Entrada["MESH"][mesh][0]:
         mesh +=1
-    N[curve] = property_elasticity(mesh+1,Entrada)*property_area(mesh+1,Entrada)/tamanho_mesh(mesh,Entrada)*(d[curve+1] - d[curve])
+    for i in range(int(Entrada["MESH"][mesh][2]) -1):
+        a+=1
+        N[a] = property_elasticity(mesh+1,Entrada)*property_area(mesh+1,Entrada)/tamanho_mesh(mesh,Entrada)*(u[a+1] - u[a])#problema nas meshs também
 
 # Forma recomendada (fecha automaticamente)
 with open("saida_barra.txt", "w") as arquivo:
