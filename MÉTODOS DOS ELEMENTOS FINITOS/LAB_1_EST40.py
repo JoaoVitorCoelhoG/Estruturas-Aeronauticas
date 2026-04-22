@@ -124,10 +124,12 @@ def phi_integral(curve_id:int, Entrada:list)->float: # Tá linear ainda
     """
 
     mesh = 0
-    while curve_id != int(Entrada["MESH"][mesh-1][0]):
+    count = 0
+    while curve_id != int(Entrada["MESH"][mesh][0]):
+        count+=int(Entrada["MESH"][mesh][2])
         mesh+=1
 
-    element_in_mesh = int(Entrada["MESH"][mesh-1][2]) 
+    element_in_mesh = int(Entrada["MESH"][mesh][2]) 
     cte = (tamanho_mesh(mesh,Entrada))/element_in_mesh
 
     tamanho_matriz = Entrada["TAMANHO_MATRIZ"] 
@@ -144,14 +146,6 @@ def phi_integral(curve_id:int, Entrada:list)->float: # Tá linear ainda
     q = np.linspace(q_initial, q_final, element_in_mesh+1)
     
 
-    mesh = 1
-    count = 0
-    while curve_id != int(Entrada["MESH"][mesh-1][0]):
-        mesh+=1
-        a = 0
-        while a < int(Entrada["MESH"][mesh-1][2]):
-            a +=1
-        count+=a
     for k in range(element_in_mesh):
         q_initial = q[k]
         q_final = q[k+1]
@@ -276,28 +270,27 @@ for restriction_point in range(0,int(len(Entrada["BC"]))):
     Kcc, Fcc = restricao(K,curve, Forca_final)
 
 u = np.linalg.solve(Kcc, Fcc)
-#print(u)
 
 f_cc = Kcc@u
 reactions_force = K@u - Forca_final
-d = u[::int(Entrada["MESH"][0][2])] #Isso não está correto, só funciona para quando o número de meshs é igual
-#print(u[::int(Entrada["MESH"][0][2])])
 
-#Falta só calcular as forças normais
-
-N = np.zeros(tamanho_matriz - 1)
-
-#Fazer generalizações para quando tiver muitas meshs
-N = np.ones(tamanho_matriz-1)
-a =0 
+d = []
+a= 0
 for curve in range(len(Entrada["CURVES"])):
     mesh = 0
     while curve + 1 != Entrada["MESH"][mesh][0]:
         mesh +=1
-    for i in range(int(Entrada["MESH"][mesh][2])):
-        a+=1
-        N[a-1] = property_elasticity(mesh+1,Entrada)*property_area(mesh+1,Entrada)/tamanho_mesh(mesh,Entrada)*(u[a] - u[a-1])#problema nas meshs também
-    
+    d.append(u[a])
+    a += int(Entrada["MESH"][mesh][2])
+
+d.append(u[-1])
+#Fazer generalizações para quando tiver muitas meshs
+N= []
+for curve in range(len(Entrada["CURVES"])):
+    mesh = 0
+    while curve + 1 != Entrada["MESH"][mesh][0]:
+        mesh +=1
+    N.append(property_elasticity(mesh+1,Entrada)*property_area(mesh+1,Entrada)/tamanho_mesh(mesh,Entrada)*(d[curve+1] - d[curve])) #problema nas meshs também
 
 
 with open("saida_barra.txt", "w") as arquivo:
@@ -310,8 +303,8 @@ with open("saida_barra.txt", "w") as arquivo:
     arquivo.write("|   Nó|              u|              v|\n")
     arquivo.write("---------------------------------------\n")
 
-    for no in range(tamanho_matriz):
-        arquivo.write("|%5d|%15.4f|%15s|\n" % (no+1, u[no], "0.0"))
+    for no in range(len(d)):
+        arquivo.write("|%5d|%15.4f|%15s|\n" % (no+1, d[no], "0.0"))
 
     arquivo.write("---------------------------------------\n\n\n")
 
@@ -320,8 +313,8 @@ with open("saida_barra.txt", "w") as arquivo:
     arquivo.write("|     Elemento|          Força x|\n")
     arquivo.write("---------------------------------\n")
 
-    for no in range(1,tamanho_matriz):
-        arquivo.write("|%13d|%17.1f|\n" % (no, N[no-1]))
+    for no in range(len(N)):
+        arquivo.write("|%13d|%17.1f|\n" % (no, N[no]))
     arquivo.write("---------------------------------\n\n\n")
 
     arquivo.write("------ Forças de Reação -----\n")
