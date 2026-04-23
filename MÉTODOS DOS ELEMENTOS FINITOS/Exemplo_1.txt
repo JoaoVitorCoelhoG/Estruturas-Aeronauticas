@@ -16,8 +16,8 @@
 2,2,0.0022
 
 *MESH (curve_id,property_id,num_elem)
-1,1,1
-2,2,1
+1,1,10
+2,2,10
 
 *POINT_LOADS (id,point_id,related_gdl,value)
 1,2,1,-25000
