@@ -1,0 +1,40 @@
+*POINTS (id,x_point,y_point)
+1,0.000,0.
+2,4,0.
+3,8,0.
+4,4,-2.
+5,0,-4
+
+*CURVES (id,point_ini,point_fim)
+1,1,2
+2,2,3
+3,2,4
+4,1,4
+5,3,4
+6,4,5
+
+*MATERIALS (id,E,nu)
+1,200000000000,0.3E
+
+*PROPERTIES (id,material_id,A)
+1,1,0.0002
+
+*MESH (curve_id,property_id,num_elem)
+1,1,10
+2,1,10
+3,1,10
+4,1,10
+5,1,10
+6,1,10
+
+*POINT_LOADS (id,point_id,related_gdl,value)
+1,2,2,-24000
+2,3,2,-12000
+
+*DIST_LOADS (id,curve_id,value_ini,value_fim,direction:(x,y,l,t))
+
+*BC (point_id,related_gdl,value)
+1,1,0.
+1,2,0.
+5,1,0.
+5,2,0.
