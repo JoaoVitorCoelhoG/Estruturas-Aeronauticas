@@ -21,7 +21,7 @@ def defactor(linha: str, f):
 
 Entrada = {}
 
-with open("Exemplo_1.txt", "r", encoding="utf-8") as f:
+with open("entrada_Ex_Trelica.txt", "r", encoding="utf-8") as f:
 
     for linha in f:
 
@@ -55,8 +55,7 @@ for i in range(len((Entrada["MESH"]))):
 
 tamanho_matriz = int(tamanho_matriz) + 1
 
-Entrada["TAMANHO_MATRIZ"] = tamanho_matriz
-
+Entrada["TAMANHO_MATRIZ"] = 2*tamanho_matriz
 
 def tamanho_mesh(n_mesh:int,Entrada:list)->float:
     """
@@ -75,6 +74,24 @@ def tamanho_mesh(n_mesh:int,Entrada:list)->float:
     d = sqrt((a_y-b_y)**2+(a_x-b_x)**2)
     return  d
 
+def angulo_mesh(n_mesh:int,Entrada:list)->float:
+    """
+    n_mesh: É o número do mesh definido pela ordem de meshs da entrada (Ordem da barra)
+    Entrada: É o Dicionário de todos os dados da entrada
+    return:: float
+    return: O comprimento do n_mesh-esimo elemento.
+    """
+
+    curve = Entrada["CURVES"][int(Entrada["MESH"][n_mesh-1][0])-1]
+    a_y = Entrada["POINTS"][int(curve[1])-1][2]
+    a_x = Entrada["POINTS"][int(curve[1])-1][1]
+    b_y = Entrada["POINTS"][int(curve[2])-1][2]
+    b_x = Entrada["POINTS"][int(curve[2])-1][1]
+
+    d = sqrt((a_y-b_y)**2+(a_x-b_x)**2)
+    s= (b_y - a_y)/d
+    c= (b_x - a_x)/d
+    return  c,s
 
 def phi_integral(curve_id:int, Entrada:list)->float: # Tá linear ainda
     """
@@ -106,12 +123,15 @@ def phi_integral(curve_id:int, Entrada:list)->float: # Tá linear ainda
     #vetor = np.linspace(curve_init[1], curve_end[1], element_in_mesh)
     q = np.linspace(q_initial, q_final, element_in_mesh+1)
     
-
     for k in range(element_in_mesh):
         q_initial = q[k]
         q_final = q[k+1]
-        b[count] += (2*q_initial + q_final)/6*cte
-        b[count+1] += (1*q_initial + 2*q_final)/6*cte
+        if(Entrada["DIST_LOADS"][point_force-1][4]=='x'):
+            b[2*count] += (2*q_initial + q_final)/6*cte
+            b[2*count+2] += (1*q_initial + 2*q_final)/6*cte
+        if(Entrada["DIST_LOADS"][point_force-1][4]=='y'):
+            b[2*count+1] += (2*q_initial + q_final)/6*cte
+            b[2*count+3] += (1*q_initial + 2*q_final)/6*cte
         count+=1
 
     return b
@@ -129,16 +149,17 @@ def phi_derivate(n_mesh:int,node:int,Entrada:list) -> list:
     tamanho_matriz = Entrada["TAMANHO_MATRIZ"] 
 
     K = np.zeros((tamanho_matriz,tamanho_matriz))
-    K[node-1][node-1]=cte
-    K[node][node]=cte
-    K[node-1][node]=-cte
-    K[node][node-1]=-cte
-    # for i in range(tamanho_matriz):
-    #     for j in range(tamanho_matriz): # Dá para colocar condição de para de acordo com o número de meshs
-    #         if((i==node-1 and j == node-1) or (i==node and j == node)):
-    #             K[i][j] = cte
-    #         if((i==node and j == node-1) or (i==node-1 and j == node)):
-    #             K[i][j] = -cte #COLOCAR ISSO EM UMA ENTRADA SÓ
+    A = np.zeros((2,2))
+    c, s = angulo_mesh(n_mesh,Entrada)
+    A = cte*np.array([
+        [ c**2,  c*s, -c**2, -c*s],
+        [ c*s,   s**2, -c*s, -s**2],
+        [-c**2, -c*s,  c**2,  c*s],
+        [-c*s,  -s**2,  c*s,  s**2]
+    ])
+    for i in range(len(A)):
+        for j in range(len(A)):
+            K[node + i][node + j] = A[i][j]
     return K
             
 def property_area(n_mesh: int, Entrada: list) ->float:
@@ -174,9 +195,9 @@ for curve in range(1,int(len(Entrada["MESH"]))+1):
         mesh+=1
     count = 0
     while (count < Entrada["MESH"][mesh-1][2]):
+        K += phi_derivate(mesh,2*node,Entrada) 
         node +=1
         count +=1
-        K += phi_derivate(mesh,node,Entrada) 
         
 #print(K)
 
@@ -184,8 +205,10 @@ for curve in range(1,int(len(Entrada["MESH"]))+1):
 
 b = np.zeros(tamanho_matriz)
 
-for curve in range(1,int(len(Entrada["MESH"]))+1):
-    b+=phi_integral(curve,Entrada)
+dist_curve_ids = {int(dl[1]) for dl in Entrada.get("DIST_LOADS", [])}
+for curve in range(1, int(len(Entrada["MESH"]))+1):
+    if curve in dist_curve_ids:
+        b += phi_integral(curve, Entrada)
 
 #print(b)
 
@@ -203,7 +226,8 @@ for force_id in range(0,int(len(Entrada["POINT_LOADS"]))):
     while curve+1 != Entrada["MESH"][mesh][0]:
         mesh+=1        
         a += int(Entrada["MESH"][mesh][2])
-    F[a] += Entrada["POINT_LOADS"][force_id][3]
+    gdl = int(Entrada["POINT_LOADS"][force_id][2])
+    F[2*a + (gdl - 1)] += Entrada["POINT_LOADS"][force_id][3]
 
 #print(F)
 
@@ -223,14 +247,15 @@ def restricao(K,ponto:int,Forca_Final):
 
 Kcc = K.copy()
 Fcc = Forca_final.copy()
-for restriction_point in range(0,int(len(Entrada["BC"]))):
-    curve = 0
-    while Entrada["BC"][restriction_point][0] != Entrada["CURVES"][curve][1]:
-        if curve + 1 >= len(Entrada["CURVES"]) and Entrada["BC"][restriction_point][0] == Entrada["CURVES"][curve][2]:
-            curve+=1
-            break
-        curve+=1
-    Kcc, Fcc = restricao(K,curve, Forca_final)
+for restriction_point in range(0, int(len(Entrada["BC"]))):
+    point_id = int(Entrada["BC"][restriction_point][0])
+    gdl      = int(Entrada["BC"][restriction_point][1])
+    dof = 2 * (point_id - 1) + (gdl - 1)
+    Kcc, Fcc = restricao(Kcc, dof, Fcc)
+
+for i in range(tamanho_matriz):
+    if Kcc[i, i] == 0:
+        Kcc, Fcc = restricao(Kcc, i, Fcc)
 
 u = np.linalg.solve(Kcc, Fcc)
 
@@ -238,23 +263,28 @@ f_cc = Kcc@u
 reactions_force = K@u - Forca_final
 
 d = []
-a= 0
+a = 0
 for curve in range(len(Entrada["CURVES"])):
     mesh = 0
     while curve + 1 != Entrada["MESH"][mesh][0]:
-        mesh +=1
-    d.append(u[a])
-    a += int(Entrada["MESH"][mesh][2])
+        mesh += 1
+    d.append(u[a])      
+    d.append(u[a+1])    
+    a += 2 * int(Entrada["MESH"][mesh][2])
 
-d.append(u[-1])
-#Fazer generalizações para quando tiver muitas meshs
-N= []
+d.append(u[a])      
+d.append(u[a+1])    
+
+N = []
 for curve in range(len(Entrada["CURVES"])):
     mesh = 0
     while curve + 1 != Entrada["MESH"][mesh][0]:
-        mesh +=1
-    N.append(property_elasticity(mesh+1,Entrada)*property_area(mesh+1,Entrada)/tamanho_mesh(mesh,Entrada)*(d[curve+1] - d[curve])) #problema nas meshs também
-
+        mesh += 1
+    c, s = angulo_mesh(mesh+1, Entrada)
+    cte = property_elasticity(mesh+1, Entrada) * property_area(mesh+1, Entrada) / tamanho_mesh(mesh+1, Entrada)
+    dux = d[2*curve+2]   - d[2*curve]
+    duy = d[2*curve+3] - d[2*curve+1]
+    N.append(cte * (c*dux + s*duy))
 
 with open("saida_barra.txt", "w") as arquivo:
     arquivo.write("Resultado da Simulação\n\n")
@@ -266,8 +296,8 @@ with open("saida_barra.txt", "w") as arquivo:
     arquivo.write("|   Nó|              u|              v|\n")
     arquivo.write("---------------------------------------\n")
 
-    for no in range(len(d)):
-        arquivo.write("|%5d|%15.4f|%15s|\n" % (no+1, d[no], "0.0"))
+    for no in range(len(d)//2):
+        arquivo.write("|%5d|%15.4f|%15.4f|\n" % (no+1, d[2*no], d[2*no+1]))
 
     arquivo.write("---------------------------------------\n\n\n")
 
@@ -277,7 +307,7 @@ with open("saida_barra.txt", "w") as arquivo:
     arquivo.write("---------------------------------\n")
 
     for no in range(len(N)):
-        arquivo.write("|%13d|%17.1f|\n" % (no, N[no]))
+        arquivo.write("|%13d|%17.2f|\n" % (no+1, N[no]))
     arquivo.write("---------------------------------\n\n\n")
 
     arquivo.write("------ Forças de Reação -----\n")
@@ -285,4 +315,7 @@ with open("saida_barra.txt", "w") as arquivo:
     arquivo.write("-----------------------------\n")
 
     for no in range(len(Entrada["BC"])):
-        arquivo.write("|%13d|%14.1f|\n" % (Entrada["BC"][no][0], reactions_force[no]))
+        point_id = int(Entrada["BC"][no][0])
+        gdl      = int(Entrada["BC"][no][1])
+        dof = 2 * (point_id - 1) + (gdl - 1)
+        arquivo.write("|%5d|%6d|%15.2f|\n" % (point_id, gdl, reactions_force[dof]))
