@@ -187,6 +187,14 @@ K = np.zeros((tamanho_matriz,tamanho_matriz))
 for i in range(len(Entrada["CURVES"])):
     K += matriz_rigidez(i,Entrada)
 
+# Molas (rigidez aterrada): soma k na diagonal do GDL correspondente
+for i in range(len(Entrada.get("SPRING", []))):
+    point_id    = Entrada["SPRING"][i][0] - 1
+    related_gdl = Entrada["SPRING"][i][1]
+    value       = Entrada["SPRING"][i][2]
+    dof = 3*point_id + (related_gdl - 1)
+    K[dof][dof] += value
+
 #Força distribuida
 
 def forca_distribuida(force_dist_id:int, Entrada:list):
