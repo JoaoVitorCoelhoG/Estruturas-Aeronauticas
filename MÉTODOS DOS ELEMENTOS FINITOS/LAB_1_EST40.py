@@ -422,35 +422,3 @@ with open(arquivo_saida, "w", encoding="utf-8") as arquivo:
 
 
 
-
-# f_local = np.zeros(6)
-    
-#     if direcao == 'l': # Carga Axial Local
-#         q_1 = Entrada["DIST_LOADS"][force_dist_id][2]
-#         q_2 = Entrada["DIST_LOADS"][force_dist_id][3]
-#         f_local[0] = L*(2*q_1+q_2)/6
-#         f_local[3] = L*(q_1+2*q_2)/6
-    
-#     elif direcao == 't': # Carga Transversal Local
-#         p_1 = Entrada["DIST_LOADS"][force_dist_id][2]
-#         p_2 = Entrada["DIST_LOADS"][force_dist_id][3]
-#         f_local[1] = L*(7*p_1+3*p_2)/20
-#         f_local[2] = L**2*(3*p_1+2*p_2)/60
-#         f_local[4] = L*(3*p_1+7*p_2)/20
-#         f_local[5] = -L**2*(2*p_1+3*p_2)/60
-
-#     # Matriz de transformação R transposta
-#     R_T = np.array([
-#         [c, -s, 0, 0, 0, 0],
-#         [s,  c, 0, 0, 0, 0],
-#         [0,  0, 1, 0, 0, 0],
-#         [0,  0, 0, c, -s, 0],
-#         [0,  0, 0, s,  c, 0],
-#         [0,  0, 0, 0,  0, 1]
-#     ])
-
-#     f_global_elem = R_T @ f_local
-
-#     # Alocação no vetor global
-#     f_temp[3*point_1 : 3*point_1+3] += f_global_elem[0:3]
-#     f_temp[3*point_2 : 3*point_2+3] += f_global_elem[3:6]
