@@ -246,7 +246,29 @@ def forca_distribuida(force_dist_id:int, Entrada:list):
             f_temp[3*point_2+1] += L*(3*q_1+7*q_2)/20
             f_temp[3*point_2+2] += -L**2*(2*q_1+3*q_2)/60
 
-    #   FALTA MUDAR A DIREÇÃO
+        if direcao == 'l' or direcao == 't':
+            f_local = np.zeros(6)
+            if direcao == 'l':
+                f_local[0] = L*(2*q_1+q_2)/6
+                f_local[3] = L*(q_1+2*q_2)/6
+            if direcao == 't':
+                f_local[1] = L*(7*q_1+3*q_2)/20
+                f_local[2] = L**2*(3*q_1+2*q_2)/60
+                f_local[4] = L*(3*q_1+7*q_2)/20
+                f_local[5] = -L**2*(2*q_1+3*q_2)/60
+
+            R_T = np.array([
+                [c, -s, 0, 0,  0, 0],
+                [s,  c, 0, 0,  0, 0],
+                [0,  0, 1, 0,  0, 0],
+                [0,  0, 0, c, -s, 0],
+                [0,  0, 0, s,  c, 0],
+                [0,  0, 0, 0,  0, 1]
+            ])
+            f_global_elem = R_T @ f_local
+            f_temp[3*point_1 : 3*point_1+3] += f_global_elem[0:3]
+            f_temp[3*point_2 : 3*point_2+3] += f_global_elem[3:6]
+
     return f_temp
 
 f = np.zeros(tamanho_matriz)
@@ -394,20 +416,6 @@ with open("saida_portico.txt", "w", encoding="utf-8") as arquivo:
         dof = 3*point_id + (gdl-1)
         arquivo.write("|%5d|%6d|%15s|\n" % (point_id+1, gdl, str(round(float(reactions_force[dof]), 4))))
     arquivo.write("-"*30 + "\n")
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
