@@ -28,7 +28,7 @@ def defactor(linha: str, f, tipos=None):
 
 Entrada = {}
 
-with open("entrada_Ex_Viga.txt", "r", encoding="utf-8") as f:
+with open("entrada_Ex_Portico.txt", "r", encoding="utf-8") as f:
 
     for linha in f:
 
@@ -100,19 +100,35 @@ def material_property(property_id:int, Entrada:list):
 
     return A, I, E, mu
 
-tamanho_matriz =0
-for i in range(len((Entrada["MESH"]))): 
-    tamanho_matriz += Entrada["MESH"][i][2]
+#Vou montar os nós de cada curva
+Entrada["NOS_DA_CURVA"] = []
+Entrada["POINT_TO_NODE"] = [None]*len(Entrada["POINTS"])
+total_nos = 0
+for curve_id in range(len(Entrada["CURVES"])):
+    num_elem = Entrada["MESH"][curve_id][2]
+    point_1 = Entrada["CURVES"][curve_id][1]
+    point_2 = Entrada["CURVES"][curve_id][2]
+    if Entrada["POINT_TO_NODE"][point_1 -1] is None:
+        Entrada["POINT_TO_NODE"][point_1 -1] = total_nos
+        total_nos += 1
+    no_ini = Entrada["POINT_TO_NODE"][point_1 -1]
+    nos_meio = list(range(total_nos, total_nos + num_elem -1))
+    total_nos += num_elem -1
+    if Entrada["POINT_TO_NODE"][point_2 -1] is None:
+        Entrada["POINT_TO_NODE"][point_2 -1] = total_nos
+        total_nos += 1
+    no_fim = Entrada["POINT_TO_NODE"][point_2 -1]
+    Entrada["NOS_DA_CURVA"].append([no_ini] + nos_meio + [no_fim])
 
-tamanho_matriz = int(tamanho_matriz) + 1
-Entrada["TAMANHO_MATRIZ"] = 3*tamanho_matriz
+Entrada["TAMANHO_MATRIZ"] = 3*total_nos
 
 def matriz_rigidez(curve_id:int, Entrada:list):
 
-    point_1 = Entrada["CURVES"][curve_id][1]-1
-    point_2 = Entrada["CURVES"][curve_id][2]-1
     L, c,s = geometria_curva(curve_id, Entrada)
-    
+    num_elem = Entrada["MESH"][curve_id][2]
+    L = L/num_elem
+    nos = Entrada["NOS_DA_CURVA"][curve_id]
+
     tamanho_matriz = Entrada["TAMANHO_MATRIZ"]
     K_temp = np.zeros((tamanho_matriz,tamanho_matriz))
     property_id = Entrada["MESH"][curve_id][1]
@@ -120,61 +136,64 @@ def matriz_rigidez(curve_id:int, Entrada:list):
 
     cte = A*L**2/(2*I)
 
-    K_temp[3*point_1][3*point_1] = cte*c**2 + 6*s**2
-    K_temp[3*point_1 + 1][3*point_1] = c*s*(cte -6)
-    K_temp[3*point_1][3*point_1 + 1] = c*s*(cte -6)
-    K_temp[3*point_1 + 1][3*point_1+1] = cte*s**2 + 6*c**2
+    for i in range(num_elem):
+        point_1 = nos[i]
+        point_2 = nos[i+1]
+        K_temp[3*point_1][3*point_1] += cte*c**2 + 6*s**2
+        K_temp[3*point_1 + 1][3*point_1] += c*s*(cte -6)
+        K_temp[3*point_1][3*point_1 + 1] += c*s*(cte -6)
+        K_temp[3*point_1 + 1][3*point_1+1] += cte*s**2 + 6*c**2
 
-    K_temp[3*point_1][3*point_2] = -(cte*c**2 + 6*s**2)
-    K_temp[3*point_1 + 1][3*point_2] = -(c*s*(cte -6))
-    K_temp[3*point_1][3*point_2 + 1] = -(c*s*(cte -6))
-    K_temp[3*point_1 + 1][3*point_2+1] = -(cte*s**2 + 6*c**2)
+        K_temp[3*point_1][3*point_2] += -(cte*c**2 + 6*s**2)
+        K_temp[3*point_1 + 1][3*point_2] += -(c*s*(cte -6))
+        K_temp[3*point_1][3*point_2 + 1] += -(c*s*(cte -6))
+        K_temp[3*point_1 + 1][3*point_2+1] += -(cte*s**2 + 6*c**2)
 
-    K_temp[3*point_2][3*point_1] = -(cte*c**2 + 6*s**2)
-    K_temp[3*point_2 + 1][3*point_1] = -(c*s*(cte -6))
-    K_temp[3*point_2][3*point_1 + 1] = -(c*s*(cte -6))
-    K_temp[3*point_2 + 1][3*point_1+1] = -(cte*s**2 + 6*c**2)
+        K_temp[3*point_2][3*point_1] += -(cte*c**2 + 6*s**2)
+        K_temp[3*point_2 + 1][3*point_1] += -(c*s*(cte -6))
+        K_temp[3*point_2][3*point_1 + 1] += -(c*s*(cte -6))
+        K_temp[3*point_2 + 1][3*point_1+1] += -(cte*s**2 + 6*c**2)
 
-    K_temp[3*point_2][3*point_2] = cte*c**2 + 6*s**2
-    K_temp[3*point_2 + 1][3*point_2] = c*s*(cte -6)
-    K_temp[3*point_2][3*point_2 + 1] = c*s*(cte -6)
-    K_temp[3*point_2 + 1][3*point_2+1] = cte*s**2 + 6*c**2
+        K_temp[3*point_2][3*point_2] += cte*c**2 + 6*s**2
+        K_temp[3*point_2 + 1][3*point_2] += c*s*(cte -6)
+        K_temp[3*point_2][3*point_2 + 1] += c*s*(cte -6)
+        K_temp[3*point_2 + 1][3*point_2+1] += cte*s**2 + 6*c**2
 
-    #---
-    K_temp[3*point_1][3*point_1+2] = -3*L*s
-    K_temp[3*point_1+2][3*point_1] = -3*L*s
+        #---
+        K_temp[3*point_1][3*point_1+2] += -3*L*s
+        K_temp[3*point_1+2][3*point_1] += -3*L*s
 
-    K_temp[3*point_1+1][3*point_1+2] = 3*L*c
-    K_temp[3*point_1+2][3*point_1+1] = 3*L*c
+        K_temp[3*point_1+1][3*point_1+2] += 3*L*c
+        K_temp[3*point_1+2][3*point_1+1] += 3*L*c
 
-    K_temp[3*point_1+2][3*point_1+2] = 2*L**2
+        K_temp[3*point_1+2][3*point_1+2] += 2*L**2
 
-    #---
-    K_temp[3*point_2][3*point_1+2] = 3*L*s
-    K_temp[3*point_2+2][3*point_1] = -3*L*s
+        #---
+        K_temp[3*point_2][3*point_1+2] += 3*L*s
+        K_temp[3*point_2+2][3*point_1] += -3*L*s
 
-    K_temp[3*point_2+1][3*point_1+2] = -3*L*c
-    K_temp[3*point_2+2][3*point_1+1] = 3*L*c
+        K_temp[3*point_2+1][3*point_1+2] += -3*L*c
+        K_temp[3*point_2+2][3*point_1+1] += 3*L*c
 
-    K_temp[3*point_2+2][3*point_1+2] = L**2
+        K_temp[3*point_2+2][3*point_1+2] += L**2
 
-    #---
-    K_temp[3*point_1][3*point_2+2] = -3*L*s
-    K_temp[3*point_1+2][3*point_2] = 3*L*s
+        #---
+        K_temp[3*point_1][3*point_2+2] += -3*L*s
+        K_temp[3*point_1+2][3*point_2] += 3*L*s
 
-    K_temp[3*point_1+1][3*point_2+2] = 3*L*c
-    K_temp[3*point_1+2][3*point_2+1] = -3*L*c
+        K_temp[3*point_1+1][3*point_2+2] += 3*L*c
+        K_temp[3*point_1+2][3*point_2+1] += -3*L*c
 
-    K_temp[3*point_1+2][3*point_2+2] = L**2
+        K_temp[3*point_1+2][3*point_2+2] += L**2
 
-    #---
-    K_temp[3*point_2][3*point_2+2] = +3*L*s
-    K_temp[3*point_2+2][3*point_2] = +3*L*s
+        #---
+        K_temp[3*point_2][3*point_2+2] += +3*L*s
+        K_temp[3*point_2+2][3*point_2] += +3*L*s
 
-    K_temp[3*point_2+1][3*point_2+2] = -3*L*c
-    K_temp[3*point_2+2][3*point_2+1] = -3*L*c
+        K_temp[3*point_2+1][3*point_2+2] += -3*L*c
+        K_temp[3*point_2+2][3*point_2+1] += -3*L*c
 
-    K_temp[3*point_2+2][3*point_2+2] = 2*L**2
+        K_temp[3*point_2+2][3*point_2+2] += 2*L**2
 
     K_temp = K_temp*2*E*I/L**3
     return K_temp
@@ -189,7 +208,7 @@ for i in range(len(Entrada["CURVES"])):
 
 # Molas (rigidez aterrada): soma k na diagonal do GDL correspondente
 for i in range(len(Entrada.get("SPRING", []))):
-    point_id    = Entrada["SPRING"][i][0] - 1
+    point_id    = Entrada["POINT_TO_NODE"][Entrada["SPRING"][i][0] -1]
     related_gdl = Entrada["SPRING"][i][1]
     value       = Entrada["SPRING"][i][2]
     dof = 3*point_id + (related_gdl - 1)
@@ -201,29 +220,33 @@ def forca_distribuida(force_dist_id:int, Entrada:list):
     direcao = Entrada["DIST_LOADS"][force_dist_id][4]
     curve_id = Entrada["DIST_LOADS"][force_dist_id][1] - 1
     L, c,s = geometria_curva(curve_id, Entrada)
+    num_elem = Entrada["MESH"][curve_id][2]
+    L = L/num_elem
+    nos = Entrada["NOS_DA_CURVA"][curve_id]
 
-    point_1 = Entrada["CURVES"][curve_id][1]-1
-    point_2 = Entrada["CURVES"][curve_id][2]-1
+    v_ini = Entrada["DIST_LOADS"][force_dist_id][2]
+    v_fim = Entrada["DIST_LOADS"][force_dist_id][3]
 
     tamanho_matriz = Entrada["TAMANHO_MATRIZ"]
     f_temp = np.zeros(tamanho_matriz)
 
-    if direcao == 'x':
-        q_1 = Entrada["DIST_LOADS"][force_dist_id][2]
-        q_2 = Entrada["DIST_LOADS"][force_dist_id][3]
-        f_temp[3*point_1] = L*(2*q_1+q_2)/6
-        f_temp[3*point_2] = L*(q_1+2*q_2)/6
-    
-    if direcao == 'y':
-        q_1 = Entrada["DIST_LOADS"][force_dist_id][2]
-        q_2 = Entrada["DIST_LOADS"][force_dist_id][3]
-        f_temp[3*point_1+1] = L*(7*q_1+3*q_2)/20
-        f_temp[3*point_1+2] = L**2*(3*q_1+2*q_2)/60
-        
-        f_temp[3*point_2+1] = L*(3*q_1+7*q_2)/20
-        f_temp[3*point_2+2] = -L**2*(2*q_1+3*q_2)/60
+    for i in range(num_elem):
+        point_1 = nos[i]
+        point_2 = nos[i+1]
+        q_1 = v_ini + (v_fim - v_ini)*i/num_elem
+        q_2 = v_ini + (v_fim - v_ini)*(i+1)/num_elem
 
-    #   FALTA MUDAR A DIREÇÃO 
+        if direcao == 'x':
+            f_temp[3*point_1]   += L*(2*q_1+q_2)/6
+            f_temp[3*point_2]   += L*(q_1+2*q_2)/6
+
+        if direcao == 'y':
+            f_temp[3*point_1+1] += L*(7*q_1+3*q_2)/20
+            f_temp[3*point_1+2] += L**2*(3*q_1+2*q_2)/60
+            f_temp[3*point_2+1] += L*(3*q_1+7*q_2)/20
+            f_temp[3*point_2+2] += -L**2*(2*q_1+3*q_2)/60
+
+    #   FALTA MUDAR A DIREÇÃO
     return f_temp
 
 f = np.zeros(tamanho_matriz)
@@ -232,9 +255,9 @@ for i in range(len(Entrada["DIST_LOADS"])):
 
 #Força Concetrada
 def forca_concentrada(force_conc_id:int, Entrada:list):
-    point_id = Entrada["POINT_LOADS"][force_conc_id][1] -1 
-    value = Entrada["POINT_LOADS"][force_conc_id][3] 
-    related_gdl = Entrada["POINT_LOADS"][force_conc_id][2] 
+    point_id = Entrada["POINT_TO_NODE"][Entrada["POINT_LOADS"][force_conc_id][1] -1]
+    value = Entrada["POINT_LOADS"][force_conc_id][3]
+    related_gdl = Entrada["POINT_LOADS"][force_conc_id][2]
     
     tamanho_matriz = Entrada["TAMANHO_MATRIZ"]
     f_conc_temp = np.zeros(tamanho_matriz)
@@ -255,33 +278,27 @@ for i in range(len(Entrada["POINT_LOADS"])):
 #Condições de Contorno
 
 def boudary_condition(BC_id: int, Entrada: list, BC:list, forca: list):
-    
-    point_id = Entrada["BC"][BC_id][0] -1 
 
-    value = Entrada["BC"][BC_id][2] 
-    related_gdl = Entrada["BC"][BC_id][1] 
+    point_id = Entrada["POINT_TO_NODE"][Entrada["BC"][BC_id][0] -1]
+
+    value = Entrada["BC"][BC_id][2]
+    related_gdl = Entrada["BC"][BC_id][1]
 
     if related_gdl == 1:
         for i in range(tamanho_matriz):
             BC[3*point_id][i] = 0
-        for i in range(tamanho_matriz):
-            BC[i][3*point_id] = 0
         BC[3*point_id][3*point_id] = 1
         forca[3*point_id] = 0
-        
+
     if related_gdl == 2:
         for i in range(tamanho_matriz):
             BC[3*point_id+1][i] = 0
-        for i in range(tamanho_matriz):
-            BC[i][3*point_id+1] = 0
         BC[3*point_id+1][3*point_id+1] = 1
         forca[3*point_id+1] = 0
-    
+
     if related_gdl == 3:
         for i in range(tamanho_matriz):
             BC[3*point_id+2][i] = 0
-        for i in range(tamanho_matriz):
-            BC[i][3*point_id+2] = 0
         BC[3*point_id+2][3*point_id+2] = 1
         forca[3*point_id+2] = 0
 
@@ -303,11 +320,14 @@ reactions_force = K@u - forca_final
 N = [] #PONTO INICIAL E FINAL
 V = []
 M = []
+NO_INI = []
+NO_FIM = []
 
 for curve_id in range(len(Entrada["CURVES"])):
-    point_1 = Entrada["CURVES"][curve_id][1]-1
-    point_2 = Entrada["CURVES"][curve_id][2]-1
     L, c,s = geometria_curva(curve_id, Entrada)
+    num_elem = Entrada["MESH"][curve_id][2]
+    L = L/num_elem
+    nos = Entrada["NOS_DA_CURVA"][curve_id]
 
     property_id = Entrada["MESH"][curve_id][1]
     A, I, E, mu = material_property(property_id, Entrada)
@@ -317,19 +337,25 @@ for curve_id in range(len(Entrada["CURVES"])):
         [-s, c,0],
         [ 0, 0,1]
     ])
-    u_local_1 = R_T@u[[3*point_1,3*point_1+1,3*point_1+2]]
-    u_local_2 = R_T@u[[3*point_2,3*point_2+1,3*point_2+2]]
-    
-    N.append([E*A/L*(u_local_2[0] - u_local_1[0]),
-              E*A/L*(u_local_2[0] - u_local_1[0])])
-    V.append([E*I*( 12/L**3*u_local_1[1] + 6/L**2*u_local_1[2] - 12/L**3*u_local_2[1] + 6/L**2*u_local_2[2]),
-              E*I*( 12/L**3*u_local_1[1] + 6/L**2*u_local_1[2] - 12/L**3*u_local_2[1] + 6/L**2*u_local_2[2])])
-    M.append([E*I*(-6/L**2*u_local_1[1] - 4/L*u_local_1[2] + 6/L**2*u_local_2[1] - 2/L*u_local_2[2]),
-              E*I*( 6/L**2*u_local_1[1] + 2/L*u_local_1[2] - 6/L**2*u_local_2[1] + 4/L*u_local_2[2])])
+
+    for i in range(num_elem):
+        point_1 = nos[i]
+        point_2 = nos[i+1]
+        u_local_1 = R_T@u[[3*point_1,3*point_1+1,3*point_1+2]]
+        u_local_2 = R_T@u[[3*point_2,3*point_2+1,3*point_2+2]]
+
+        N.append([E*A/L*(u_local_2[0] - u_local_1[0]),
+                  E*A/L*(u_local_2[0] - u_local_1[0])])
+        V.append([E*I*( 12/L**3*u_local_1[1] + 6/L**2*u_local_1[2] - 12/L**3*u_local_2[1] + 6/L**2*u_local_2[2]),
+                  E*I*( 12/L**3*u_local_1[1] + 6/L**2*u_local_1[2] - 12/L**3*u_local_2[1] + 6/L**2*u_local_2[2])])
+        M.append([E*I*(-6/L**2*u_local_1[1] - 4/L*u_local_1[2] + 6/L**2*u_local_2[1] - 2/L*u_local_2[2]),
+                  E*I*( 6/L**2*u_local_1[1] + 2/L*u_local_1[2] - 6/L**2*u_local_2[1] + 4/L*u_local_2[2])])
+        NO_INI.append(point_1+1)
+        NO_FIM.append(point_2+1)
 
 #Escrita da saída
 
-with open("saida_viga.txt", "w", encoding="utf-8") as arquivo:
+with open("saida_portico.txt", "w", encoding="utf-8") as arquivo:
     arquivo.write("Resultado da Simulação\n\n")
     arquivo.write("Arquivo de Entrada: entrada_Ex_Portico.txt\n\n\n")
 
@@ -349,9 +375,9 @@ with open("saida_viga.txt", "w", encoding="utf-8") as arquivo:
         "Elemento", "Nó Inicial", "Força Axial", "Cisalhamento", "Momento Fletor",
         "Nó Final", "Força Axial", "Cisalhamento", "Momento Fletor"))
     arquivo.write("-"*133 + "\n")
-    for i in range(len(Entrada["CURVES"])):
-        no_ini = Entrada["CURVES"][i][1]
-        no_fim = Entrada["CURVES"][i][2]
+    for i in range(len(N)):
+        no_ini = NO_INI[i]
+        no_fim = NO_FIM[i]
         arquivo.write("|%9d|%12d|%15s|%15s|%15s|%12d|%15s|%15s|%15s|\n" % (
             i+1, no_ini,
             str(round(float(N[i][0]), 3)), str(round(float(V[i][0]), 3)), str(round(float(M[i][0]), 3)),
@@ -363,12 +389,12 @@ with open("saida_viga.txt", "w", encoding="utf-8") as arquivo:
     arquivo.write("|%5s|%6s|%15s|\n" % ("Nó", "GDL", "Value"))
     arquivo.write("-"*30 + "\n")
     for no in range(len(Entrada["BC"])):
-        point_id = int(Entrada["BC"][no][0])
+        point_id = Entrada["POINT_TO_NODE"][Entrada["BC"][no][0] -1]
         gdl = int(Entrada["BC"][no][1])
-        dof = 3*(point_id-1) + (gdl-1)
-        arquivo.write("|%5d|%6d|%15s|\n" % (point_id, gdl, str(round(float(reactions_force[dof]), 4))))
+        dof = 3*point_id + (gdl-1)
+        arquivo.write("|%5d|%6d|%15s|\n" % (point_id+1, gdl, str(round(float(reactions_force[dof]), 4))))
     arquivo.write("-"*30 + "\n")
-    
+
 
 
 
