@@ -28,7 +28,10 @@ def defactor(linha: str, f, tipos=None):
 
 Entrada = {}
 
-with open("entrada_Ex_Portico.txt", "r", encoding="utf-8") as f:
+arquivo_entrada = "entrada_Ex3_Lista2.txt"
+arquivo_saida = arquivo_entrada.replace("entrada_", "saida_", 1)
+
+with open(arquivo_entrada, "r", encoding="utf-8") as f:
 
     for linha in f:
 
@@ -377,9 +380,9 @@ for curve_id in range(len(Entrada["CURVES"])):
 
 #Escrita da saída
 
-with open("saida_portico.txt", "w", encoding="utf-8") as arquivo:
+with open(arquivo_saida, "w", encoding="utf-8") as arquivo:
     arquivo.write("Resultado da Simulação\n\n")
-    arquivo.write("Arquivo de Entrada: entrada_Ex_Portico.txt\n\n\n")
+    arquivo.write("Arquivo de Entrada: %s\n\n\n" % arquivo_entrada)
 
     arquivo.write("-"*18 + " Resultados Nodais " + "-"*18 + "\n")
     arquivo.write("|%5s|%15s|%15s|%15s|\n" % ("Nó", "u", "v", "theta"))
