@@ -313,19 +313,19 @@ def boudary_condition(BC_id: int, Entrada: list, BC:list, forca: list):
         for i in range(tamanho_matriz):
             BC[3*point_id][i] = 0
         BC[3*point_id][3*point_id] = 1
-        forca[3*point_id] = 0
+        forca[3*point_id] = value
 
     if related_gdl == 2:
         for i in range(tamanho_matriz):
             BC[3*point_id+1][i] = 0
         BC[3*point_id+1][3*point_id+1] = 1
-        forca[3*point_id+1] = 0
+        forca[3*point_id+1] = value
 
     if related_gdl == 3:
         for i in range(tamanho_matriz):
             BC[3*point_id+2][i] = 0
         BC[3*point_id+2][3*point_id+2] = 1
-        forca[3*point_id+2] = 0
+        forca[3*point_id+2] = value
 
     return BC, forca
 
